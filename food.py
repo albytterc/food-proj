@@ -9,7 +9,11 @@ BASE_URL = 'https://api.yelp.com/v3'
 
 HEADER = {'Authorization': f"Bearer {API_KEY}"}
 
-request = requests.get(f'{BASE_URL}/businesses/search?term=vegan&location=emory&limit=3', headers=HEADER)
+endpoint = "/businesses/search"
+
+search_keys = "term=vegan&location=emory&limit=3"
+
+request = requests.get(f'{BASE_URL}{endpoint}?{search_keys}', headers=HEADER)
 response = request.json()
 
 places = response['businesses']
@@ -22,7 +26,6 @@ for i in range(len(places)):
     print(address_arr[0] + ", " + address_arr[1])
     print(places[i]['categories'][0]['title'])
     print()
-
 
 # print(json.dumps(request.json(), indent=2))
 
