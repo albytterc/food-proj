@@ -28,4 +28,3 @@ for i in range(len(places)):
     print()
 
 # print(json.dumps(request.json(), indent=2))
-
