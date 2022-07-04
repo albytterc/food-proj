@@ -2,17 +2,17 @@ import requests
 import json
 import os
 import pandas as pd
-# import sqlalchemy as db
+import sqlalchemy as db
 
 
 API_KEY = os.environ.get('YELP_API_KEY')
 BASE_URL = 'https://api.yelp.com/v3'
 HEADER = {'Authorization': f"Bearer {API_KEY}"}
-# engine = db.create_engine('sqlite:///yelp_info.db')
 database_name = 'yelp_info'
-# engine = db.create_engine('mysql://root:codio@localhost/'+database_name+'?charset=utf8', encoding='utf-8')
+engine = db.create_engine('mysql://root:codio@localhost/'+database_name+'?charset=utf8', encoding='utf-8')
 business_search_endpoint = "/businesses/search"
 prefs_dict = {}
+biz_categories = []
 
 
 def get_response(endpoint, search_keys=""):
@@ -34,34 +34,38 @@ def df_to_sql(dataframe, title):
     return database
 
 
-def print_info(places):
-    for i in range(len(places)):
-        print(places[i]['name'], end=", ")
-        print(str(places[i]['rating']) + " stars")
-        print(places[i]['display_phone'])
-        address_arr = places[i]['location']['display_address']
-        print(address_arr[0] + ", " + address_arr[1])
-        print(places[i]['categories'][0]['title'])
-        print()
-
 
 # Receives a list as a param
 def validate_prefs(pref_type, prefs):
     # check prefs against yelp search
     # not valid if no results
-    for pref in prefs:
+    valid_flag = False
+    for i, pref in enumerate(prefs):
         data = {pref_type: pref, "limit": 2}
         if "location" in prefs_dict:
-            data["location"] = prefs_dict["location"][0]
-        pref_response = get_response(business_search_endpoint, data)
+            data["location"] = prefs_dict["location"][i]
+        else:
+            data["location"] = pref
+
         try:
+            pref_response = get_response(business_search_endpoint, data)
+
+            business_df = json_to_df(pref_response)
+            business_df.to_html('business.html')
+
+            df_to_sql(business_df, "business")
+            query_result = engine.execute("select * from business;").fetchall()
+
             print(json.dumps(pref_response, indent=2))
-            if pref_response['businesses']:
-                return True
-        except:
+            if pref_response['businesses'] and pref_response['total'] > 0:
+                if pref_type == "term":
+                    global biz_categories
+                    biz_categories += get_biz_categories(pref_response['businesses'][0]['categories'])
+                valid_flag = True
+        except KeyError:
             continue
 
-    return False
+    return valid_flag
         
 
 # Takes a string param pref_type that tells the function what kind of preference it is, i.e. for businesses or locations etc. Prompt is a string that will passed to the user to ask them for their preferences
@@ -80,6 +84,16 @@ def get_prefs(pref_type, prompt):
 
 # TODO: implement a helper method to go thru the businesses in prefs_dict and collect all their categories.
 # TODO: Use this category list and pass to the request with each location
+def get_biz_categories(raw_categories):
+    categories = []
+    for category_obj in raw_categories:
+        category = category_obj['alias']
+        if category not in biz_categories and category not in categories:
+            categories.append(category)
+
+    return categories
+
+
 # Returns an array of the names of the recommended places
 # Based on the preferences passed, now in prefs_dict. 
 def get_recs():
@@ -89,44 +103,43 @@ def get_recs():
     # pass all the categories and get recs for each location
     for loc in prefs_dict["location"]:
         params = {
-            "categories": category_list, 
+            "categories": biz_categories, 
             "location": loc, 
             "sort_by": "rating",
             "limit": 1
         }
         response = get_response(business_search_endpoint, params)
-        recs.append(response["businesses"][0]["name"])
+        recs.append(response["businesses"][0])
 
     return recs
+
+
+def print_info(biz):
+    print(biz['name'], end=", ")
+    print(str(biz['rating']) + " stars")
+    print(biz['display_phone'])
+    address_arr = biz['location']['display_address']
+    print(*address_arr, sep=", ")
+    categories = []
+    for category_obj in biz['categories']:
+        categories.append(category_obj['title'])
+
+    print(*categories, sep=", ")
+    print()
 
 
 def main():
     get_prefs("location", "Where would you like to receive recommendations?")
     get_prefs("term", "What are some businesses you like?")
     print("Here are some recommendations based on what you've put in:")
-    for rec in get_recs():
-        print(rec)
+    for rec_obj in get_recs():
+        print_info(rec_obj)
 
 
 if __name__ == '__main__':
     main()
 
 
-'''
-search_keys = {'term': 'vegan', 'location': 'emory', 'limit': '3'}
-search_response = get_response(business_search_endpoint, search_keys)
 
-business_id_endpoint = "/businesses/"
-business_id = search_response['businesses'][0]['id']
-business_id_response = get_response(f'{business_id_endpoint}{business_id}')
 
-reviews_endpoint = f"/businesses/{business_id}/reviews"
-reviews_response = get_response(reviews_endpoint)
-
-business_df = json_to_df(business_id_response)
-business_df.to_html('no-category.html')
-
-df_to_sql(business_df, "business")
-query_result = engine.execute("select * from business;").fetchall()
-'''
 
