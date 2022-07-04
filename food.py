@@ -9,14 +9,16 @@ API_KEY = os.environ.get('YELP_API_KEY')
 BASE_URL = 'https://api.yelp.com/v3'
 HEADER = {'Authorization': f"Bearer {API_KEY}"}
 database_name = 'yelp_info'
-engine = db.create_engine('mysql://root:codio@localhost/'+database_name+'?charset=utf8', encoding='utf-8')
+engine = db.create_engine('mysql://root:codio@localhost/'+database_name+'?char\
+    set=utf8', encoding='utf-8')
 business_search_endpoint = "/businesses/search"
 prefs_dict = {}
 biz_categories = []
 
 
 def get_response(endpoint, search_keys=""):
-    request = requests.get(f'{BASE_URL}{endpoint}', params=search_keys, headers=HEADER)
+    request = requests.get(f'{BASE_URL}{endpoint}', params=search_keys,
+                           headers=HEADER)
     response = request.json()
     return response
 
@@ -30,9 +32,9 @@ def json_to_df(json_response):
 
 
 def df_to_sql(dataframe, title):
-    database = dataframe.to_sql(title, con=engine, if_exists='replace', index=False)
+    database = dataframe.to_sql(title, con=engine, if_exists='replace',
+                                index=False)
     return database
-
 
 
 # Receives a list as a param
@@ -60,15 +62,19 @@ def validate_prefs(pref_type, prefs):
             if pref_response['businesses'] and pref_response['total'] > 0:
                 if pref_type == "term":
                     global biz_categories
-                    biz_categories += get_biz_categories(pref_response['businesses'][0]['categories'])
+                    biz_categories += get_biz_categories(
+                        pref_response['businesses'][0]['categories']
+                    )
                 valid_flag = True
         except KeyError:
             continue
 
     return valid_flag
-        
 
-# Takes a string param pref_type that tells the function what kind of preference it is, i.e. for businesses or locations etc. Prompt is a string that will passed to the user to ask them for their preferences
+
+# Takes a string param pref_type that tells the function what kind of
+# preference it is, i.e. for businesses or locations etc. Prompt is a string
+# that will passed to the user to ask them for their preferences
 def get_prefs(pref_type, prompt):
     pref_list = []
     valid_prefs = False
@@ -82,7 +88,9 @@ def get_prefs(pref_type, prompt):
 
     return pref_list
 
-# TODO: implement a helper method to go thru the businesses in prefs_dict and collect all their categories.
+
+# TODO: implement a helper method to go thru the businesses in prefs_dict and
+# collect all their categories.
 # TODO: Use this category list and pass to the request with each location
 def get_biz_categories(raw_categories):
     categories = []
@@ -95,7 +103,7 @@ def get_biz_categories(raw_categories):
 
 
 # Returns an array of the names of the recommended places
-# Based on the preferences passed, now in prefs_dict. 
+# Based on the preferences passed, now in prefs_dict.
 def get_recs():
     recs = []
     # match recs to prefs based on categories
@@ -103,8 +111,8 @@ def get_recs():
     # pass all the categories and get recs for each location
     for loc in prefs_dict["location"]:
         params = {
-            "categories": biz_categories, 
-            "location": loc, 
+            "categories": biz_categories,
+            "location": loc,
             "sort_by": "rating",
             "limit": 1
         }
@@ -138,8 +146,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
