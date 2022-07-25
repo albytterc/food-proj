@@ -4,7 +4,7 @@ from food import get_response, json_to_df, df_to_sql, print_info
 
 class TestFood(unittest.TestCase):
     def test_get_response(self):
-        pass
+        
 
     def test_json_to_df(self):
         pass

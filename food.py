@@ -17,13 +17,27 @@ biz_categories = []
 
 
 def get_response(endpoint, search_keys=""):
-    request = requests.get(f'{BASE_URL}{endpoint}', params=search_keys,
-                           headers=HEADER)
+    """Performs a GET request to API and returns JSON response.
+    
+    Keyword arguments:
+    endpoint -- the API's endpoint as a string, e.g. "/businesses/search"
+    search_keys -- a dictionary of the different request parameters, default is with no parameters
+
+    returns the JSON response for the given endpoint and parameters
+    """
+    request = requests.get(f'{BASE_URL}{endpoint}', params=search_keys, headers=HEADER)
     response = request.json()
     return response
 
 
 def json_to_df(json_response):
+    """Converts the API's JSON response to a Pandas dataframe.
+    
+    Keyword arguments:
+    json_response -- the JSON response returned by the API request
+
+    returns a normalized Pandas dataframe, removing any unsupported types like lists or dictionaries 
+    """
     for key, value in list(json_response.items()):
         if isinstance(value, list) or isinstance(value, dict):
             del json_response[key]
@@ -32,8 +46,15 @@ def json_to_df(json_response):
 
 
 def df_to_sql(dataframe, title):
-    database = dataframe.to_sql(title, con=engine, if_exists='replace',
-                                index=False)
+    """Converts Pandas dataframe into a MySQL database table
+
+    Keyword arguments:
+    dataframe -- the Pandas dataframe gotten from the json_to_df function
+    title -- the name of the database table
+
+    returns the num of rows in the table affected by the .to_sql() method
+    """
+    database = dataframe.to_sql(title, con=engine, if_exists='replace', index=False)
     return database
 
 
